@@ -88,7 +88,7 @@ while True:
         bboxes = np.array(in_nn.getFirstLayerFp16())
         bboxes = bboxes[:np.where(bboxes == -1)[0][0]]
         bboxes = bboxes.reshape((bboxes.size // 7, 7))
-        bboxes = bboxes[((bboxes[:, 2] > 0.4) & (bboxes[:, 1] == 17.0))] # car = 7.0, person = 15.0, dog = 12.0, sheep = 17.0
+        bboxes = bboxes[((bboxes[:, 2] > 0.4) & (bboxes[:, 1] == 12.0))] # car = 7.0, person = 15.0, dog = 12.0, sheep = 17.0
 
     if frame is not None:
         for raw_bbox in bboxes:

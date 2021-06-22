@@ -1,10 +1,9 @@
 """
-Tiny-yolo-v3 device side decoding demo
-  YOLO v3 Tiny is a real-time object detection model implemented with Keras* from
-  this repository <https://github.com/david8862/keras-YOLOv3-model-set> and converted
-  to TensorFlow* framework. This model was pretrained on COCO* dataset with 80 classes.
+Tiny-yolo-v4 device side decoding demo
+The code is the same as for Tiny-yolo-V3, the only difference is the blob file.
+The blob was compiled following this tutorial: https://github.com/TNTWEN/OpenVINO-YOLOV4
 
-https://docs.luxonis.com/projects/api/en/latest/samples/tiny_yolo_v3_decoding_on_device/?highlight=tiny%20yolo#rgb-tinyyolov3-decoding-on-device
+https://docs.luxonis.com/projects/api/en/latest/samples/tiny_yolo_v4_decoding_on_device/?highlight=tiny%20yolo
 """
 
 from pathlib import Path
@@ -13,9 +12,16 @@ import cv2
 import depthai as dai
 import numpy as np
 import time
+from twilio.rest import Client
+from decouple import config
+
+account_sid = config('SID')
+auth_token = config('TOKEN')
+send_from = config('SENDTO')
+send_to = config('SENDFROM')
 
 # Get argument first
-nnPath = str((Path(__file__).parent / Path('tiny-yolo-v3/tiny-yolo-v3_openvino_2021.2_6shave.blob')).resolve().absolute())
+nnPath = str((Path(__file__).parent / Path('tiny-yolo-v4/tiny-yolo-v4_openvino_2021.2_6shave.blob')).resolve().absolute())
 if len(sys.argv) > 1:
     nnPath = sys.argv[1]
 
@@ -23,7 +29,7 @@ if not Path(nnPath).exists():
     import sys
     raise FileNotFoundError(f'Required file/s not found, please run "{sys.executable} install_requirements.py"')
 
-# Tiny yolo v3 label texts
+# tiny yolo v4 label texts
 labelMap = [
     "person",         "bicycle",    "car",           "motorbike",     "aeroplane",   "bus",           "train",
     "truck",          "boat",       "traffic light", "fire hydrant",  "stop sign",   "parking meter", "bench",
@@ -88,11 +94,20 @@ with dai.Device(pipeline) as device:
     qRgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
     qDet = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 
+    time1 = 0
     frame = None
     detections = []
     startTime = time.monotonic()
     counter = 0
     color2 = (255, 255, 255)
+
+    def send_message():
+        client = Client(account_sid, auth_token)
+        message = client.messages.create(
+            to=send_from,
+            from_=send_to,
+            body="Doid alert!")
+        print(message.sid)
 
     # nn data, being the bounding box locations, are in <0..1> range - they need to be normalized with frame width/height
     def frameNorm(frame, bbox):
@@ -100,15 +115,29 @@ with dai.Device(pipeline) as device:
         normVals[::2] = frame.shape[1]
         return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
 
-    def displayFrame(name, frame):
+    def displayFrame(name, frame, time1):
         color = (255, 0, 0)
         for detection in detections:
-            bbox = frameNorm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-            cv2.putText(frame, labelMap[detection.label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-            cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
-        # Show the frame
-        cv2.imshow(name, frame)
+            if labelMap[detection.label] == "person":
+                if time1 == 0:
+                    print("First notification")
+                    send_message()
+                    time1 = time.time()
+                else:
+                    time2 = time.time()
+                    elapsedTime = time2 - time1
+                    if elapsedTime  > 60*30:
+                        print("Another notification")
+                        send_message()
+                        time1 = time.time()
+
+                #bbox = frameNorm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
+                #cv2.putText(frame, labelMap[detection.label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                #cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                #cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
+        #Show the frame
+        #cv2.imshow(name, frame)
+        return time1
 
     while True:
         if syncNN:
@@ -128,7 +157,7 @@ with dai.Device(pipeline) as device:
             counter += 1
 
         if frame is not None:
-            displayFrame("rgb", frame)
+            time1 = displayFrame("rgb", frame, time1)
 
         if cv2.waitKey(1) == ord('q'):
             break
