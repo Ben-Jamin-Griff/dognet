@@ -118,7 +118,7 @@ with dai.Device(pipeline) as device:
     def displayFrame(name, frame, time1):
         color = (255, 0, 0)
         for detection in detections:
-            if labelMap[detection.label] == "person":
+            if labelMap[detection.label] == "dog":
                 if time1 == 0:
                     print("First notification")
                     send_message()
