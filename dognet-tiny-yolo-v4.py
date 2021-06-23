@@ -89,11 +89,13 @@ detectionNetwork.out.link(nnOut.input)
 
 # Connect to device and start pipeline
 with dai.Device(pipeline) as device:
+    print('Starting detection')
 
     # Output queues will be used to get the rgb frames and nn data from the outputs defined above
     qRgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
     qDet = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 
+    show_frame = True
     time1 = 0
     frame = None
     detections = []
@@ -118,25 +120,28 @@ with dai.Device(pipeline) as device:
     def displayFrame(name, frame, time1):
         color = (255, 0, 0)
         for detection in detections:
-            if labelMap[detection.label] == "dog":
+            if labelMap[detection.label] == "person":
                 if time1 == 0:
                     print("First notification")
-                    send_message()
+                    #send_message()
                     time1 = time.time()
+                    cv2.imwrite(str(time1)+'.png', frame)
                 else:
                     time2 = time.time()
                     elapsedTime = time2 - time1
                     if elapsedTime  > 60*30:
                         print("Another notification")
-                        send_message()
+                        #send_message()
                         time1 = time.time()
+                        cv2.imwrite(str(time1)+'.png', frame)
 
-                #bbox = frameNorm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-                #cv2.putText(frame, labelMap[detection.label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                #cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                #cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
+                bbox = frameNorm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
+                cv2.putText(frame, labelMap[detection.label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
         #Show the frame
-        #cv2.imshow(name, frame)
+        if show_frame:
+            cv2.imshow(name, frame)
         return time1
 
     while True:
