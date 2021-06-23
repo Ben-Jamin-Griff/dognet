@@ -95,7 +95,7 @@ with dai.Device(pipeline) as device:
     qRgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
     qDet = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 
-    show_frame = True
+    show_frame = False
     time1 = 0
     frame = None
     detections = []
@@ -123,7 +123,7 @@ with dai.Device(pipeline) as device:
             if labelMap[detection.label] == "dog":
                 if time1 == 0:
                     print("First notification")
-                    #send_message()
+                    send_message()
                     time1 = time.time()
                     cv2.imwrite(str(time1)+'.png', frame)
                 else:
@@ -131,7 +131,7 @@ with dai.Device(pipeline) as device:
                     elapsedTime = time2 - time1
                     if elapsedTime  > 60*30:
                         print("Another notification")
-                        #send_message()
+                        send_message()
                         time1 = time.time()
                         cv2.imwrite(str(time1)+'.png', frame)
 
