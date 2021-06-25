@@ -95,7 +95,6 @@ with dai.Device(pipeline) as device:
     qRgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
     qDet = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 
-    show_frame = False
     time1 = 0
     frame = None
     detections = []
@@ -118,27 +117,34 @@ with dai.Device(pipeline) as device:
         return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
 
     def displayFrame(name, frame, time1):
+        snapshot = False
+        show_frame = False
         color = (255, 0, 0)
         for detection in detections:
             if labelMap[detection.label] == "dog":
                 if time1 == 0:
-                    print("First notification")
-                    send_message()
+                    print("First detection")
+                    #send_message()
                     time1 = time.time()
-                    cv2.imwrite(str(time1)+'.png', frame)
+                    snapshot = True
                 else:
                     time2 = time.time()
                     elapsedTime = time2 - time1
-                    if elapsedTime  > 60*30:
-                        print("Another notification")
-                        send_message()
+                    if elapsedTime  > 60:
+                        print("Another detection")
+                        #send_message()
                         time1 = time.time()
-                        cv2.imwrite(str(time1)+'.png', frame)
+                        snapshot = True
 
                 bbox = frameNorm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
                 cv2.putText(frame, labelMap[detection.label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
                 cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
                 cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
+
+        if snapshot:
+            cv2.imwrite(str(time1)+'.png', frame)
+            snapshot = False
+
         #Show the frame
         if show_frame:
             cv2.imshow(name, frame)
