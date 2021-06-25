@@ -124,7 +124,7 @@ with dai.Device(pipeline) as device:
             if labelMap[detection.label] == "dog":
                 if time1 == 0:
                     print("First detection")
-                    #send_message()
+                    send_message()
                     time1 = time.time()
                     snapshot = True
                 else:
@@ -132,7 +132,7 @@ with dai.Device(pipeline) as device:
                     elapsedTime = time2 - time1
                     if elapsedTime  > 60:
                         print("Another detection")
-                        #send_message()
+                        send_message()
                         time1 = time.time()
                         snapshot = True
 
